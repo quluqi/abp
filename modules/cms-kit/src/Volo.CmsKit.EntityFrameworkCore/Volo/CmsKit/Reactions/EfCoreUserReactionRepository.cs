@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Volo.Abp;
 using Volo.Abp.Domain.Repositories.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.CmsKit.EntityFrameworkCore;
@@ -21,29 +23,47 @@ namespace Volo.CmsKit.Reactions
             Guid userId,
             string entityType,
             string entityId,
-            string reactionName)
+            string reactionName,
+            CancellationToken cancellationToken = default)
         {
+            Check.NotNullOrWhiteSpace(entityType, nameof(entityType));
+            Check.NotNullOrWhiteSpace(entityId, nameof(entityId));
+            Check.NotNullOrWhiteSpace(reactionName, nameof(reactionName));
+
             return await DbSet
                 .Where(x =>
-                    x.UserId == userId &&
+                    x.CreatorId == userId &&
                     x.EntityType == entityType &&
                     x.EntityId == entityId &&
                     x.ReactionName == reactionName)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(GetCancellationToken(cancellationToken));
         }
 
-        public async Task<List<UserReaction>> GetListForUserAsync(Guid userId, string entityType, string entityId)
+        public async Task<List<UserReaction>> GetListForUserAsync(
+            Guid userId,
+            string entityType,
+            string entityId,
+            CancellationToken cancellationToken = default)
         {
+            Check.NotNullOrWhiteSpace(entityType, nameof(entityType));
+            Check.NotNullOrWhiteSpace(entityId, nameof(entityId));
+
             return await DbSet
                 .Where(x =>
-                    x.UserId == userId &&
+                    x.CreatorId == userId &&
                     x.EntityType == entityType &&
                     x.EntityId == entityId)
-                .ToListAsync();
+                .ToListAsync(GetCancellationToken(cancellationToken));
         }
 
-        public async Task<List<ReactionSummaryQueryResultItem>> GetSummariesAsync(string entityType, string entityId)
+        public async Task<List<ReactionSummaryQueryResultItem>> GetSummariesAsync(
+            string entityType,
+            string entityId,
+            CancellationToken cancellationToken = default)
         {
+            Check.NotNullOrWhiteSpace(entityType, nameof(entityType));
+            Check.NotNullOrWhiteSpace(entityId, nameof(entityId));
+
             return await DbSet
                 .Where(x =>
                     x.EntityType == entityType &&
@@ -54,7 +74,7 @@ namespace Volo.CmsKit.Reactions
                     ReactionName = g.Key,
                     Count = g.Count()
                 })
-                .ToListAsync();
+                .ToListAsync(GetCancellationToken(cancellationToken));
         }
     }
 }

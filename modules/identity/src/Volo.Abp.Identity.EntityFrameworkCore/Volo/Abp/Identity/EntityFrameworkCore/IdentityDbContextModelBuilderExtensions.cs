@@ -43,6 +43,9 @@ namespace Volo.Abp.Identity.EntityFrameworkCore
                 b.Property(u => u.LockoutEnabled).HasDefaultValue(false)
                     .HasColumnName(nameof(IdentityUser.LockoutEnabled));
 
+                b.Property(u => u.IsExternal).IsRequired().HasDefaultValue(false)
+                    .HasColumnName(nameof(IdentityUser.IsExternal));
+
                 b.Property(u => u.AccessFailedCount)
                     .If(!builder.IsUsingOracle(), p => p.HasDefaultValue(0))
                     .HasColumnName(nameof(IdentityUser.AccessFailedCount));
@@ -229,6 +232,22 @@ namespace Volo.Abp.Identity.EntityFrameworkCore
                 b.HasIndex(x => new { x.TenantId, x.Action });
                 b.HasIndex(x => new { x.TenantId, x.UserId });
             });
+
+            builder.Entity<IdentityLinkUser>(b =>
+            {
+                b.ToTable(options.TablePrefix + "LinkUsers", options.Schema);
+
+                b.ConfigureByConvention();
+
+                b.HasIndex(x => new
+                {
+                    UserId = x.SourceUserId,
+                    TenantId = x.SourceTenantId,
+                    LinkedUserId = x.TargetUserId,
+                    LinkedTenantId = x.TargetTenantId
+                }).IsUnique();
+            });
+
 
         }
     }

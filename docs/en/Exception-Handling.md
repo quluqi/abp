@@ -85,7 +85,7 @@ Error **details** in an optional field of the JSON error message. Thrown `Except
 
 ### Logging
 
-Caught exceptions are automatically logged. 
+Caught exceptions are automatically logged.
 
 #### Log Level
 
@@ -300,7 +300,7 @@ In this case, create a class derived from the `ExceptionSubscriber` class in you
 ````csharp
 public class MyExceptionSubscriber : ExceptionSubscriber
 {
-    public override async Task HandleAsync(ExceptionNotificationContext context)
+    public async override Task HandleAsync(ExceptionNotificationContext context)
     {
         //TODO...
     }
@@ -320,3 +320,14 @@ Some exception types are automatically thrown by the framework:
 - `EntityNotFoundException` is thrown if the requested entity is not available. This is mostly thrown by [repositories](Repositories.md).
 
 You can also throw these type of exceptions in your code (although it's rarely needed).
+
+## Send exception details to the client
+
+You can send exceptions to the client via the `SendExceptionsDetailsToClients` property of the `AbpExceptionHandlingOptions` class:
+
+````csharp
+services.Configure<AbpExceptionHandlingOptions>(options =>
+{
+    options.SendExceptionsDetailsToClients = true;
+});
+````

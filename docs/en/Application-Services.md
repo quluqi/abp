@@ -342,12 +342,12 @@ public class DistrictAppService
     {
     }
 
-    protected override async Task DeleteByIdAsync(DistrictKey id)
+    protected async override Task DeleteByIdAsync(DistrictKey id)
     {
         await Repository.DeleteAsync(d => d.CityId == id.CityId && d.Name == id.Name);
     }
 
-    protected override async Task<District> GetEntityByIdAsync(DistrictKey id)
+    protected async override Task<District> GetEntityByIdAsync(DistrictKey id)
     {
         return await AsyncQueryableExecuter.FirstOrDefaultAsync(
             Repository.Where(d => d.CityId == id.CityId && d.Name == id.Name)
@@ -366,6 +366,146 @@ public class DistrictKey
     public string Name { get; set; }
 }
 ````
+
+### Authorization (for CRUD App Services)
+
+There are two ways of authorizing the base application service methods;
+
+1. You can set the policy properties (xxxPolicyName) in the constructor of your service. Example:
+
+```csharp
+public class MyPeopleAppService : CrudAppService<Person, PersonDto, Guid>
+{
+    public MyPeopleAppService(IRepository<Person, Guid> repository) 
+        : base(repository)
+    {
+        GetPolicyName = "...";
+        GetListPolicyName = "...";
+        CreatePolicyName = "...";
+        UpdatePolicyName = "...";
+        DeletePolicyName = "...";
+    }
+}
+```
+
+`CreatePolicyName` is checked by the `CreateAsync` method and so on... You should specify a policy (permission) name defined in your application.
+
+2. You can override the check methods (CheckXxxPolicyAsync) in your service. Example:
+
+```csharp
+public class MyPeopleAppService : CrudAppService<Person, PersonDto, Guid>
+{
+    public MyPeopleAppService(IRepository<Person, Guid> repository) 
+        : base(repository)
+    {
+    }
+
+    protected async override Task CheckDeletePolicyAsync()
+    {
+        await AuthorizationService.CheckAsync("...");
+    }
+}
+```
+
+You can perform any logic in the `CheckDeletePolicyAsync` method. It is expected to throw an `AbpAuthorizationException` in any unauthorized case, like `AuthorizationService.CheckAsync` already does.
+
+### Base Properties & Methods
+
+CRUD application service base class provides many useful base methods that **you can override** to customize it based on your requirements.
+
+#### CRUD Methods
+
+These are the essential CRUD methods. You can override any of them to completely customize the operation. Here, the definitions of the methods:
+
+````csharp
+Task<TGetOutputDto> GetAsync(TKey id);
+Task<PagedResultDto<TGetListOutputDto>> GetListAsync(TGetListInput input);
+Task<TGetOutputDto> CreateAsync(TCreateInput input);
+Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input);
+Task DeleteAsync(TKey id);
+````
+
+#### Querying
+
+These methods are low level methods those can be control how to query entities from the database.
+
+* `CreateFilteredQuery` can be overridden to create an `IQueryable<TEntity>` that is filtered by the given input. If your `TGetListInput` class contains any filter, it is proper to override this method and filter the query. It returns the (unfiltered) repository (which is already `IQueryable<TEntity>`) by default.
+* `ApplyPaging` is used to make paging on the query. If your `TGetListInput` already implements `IPagedResultRequest`, you don't need to override this since the ABP Framework automatically understands it and performs the paging.
+* `ApplySorting` is used to sort (order by...) the query. If your `TGetListInput` already implements the `ISortedResultRequest`, ABP Framework automatically sorts the query. If not, it fallbacks to the `ApplyDefaultSorting` which tries to sort by creating time, if your entity implements the standard `IHasCreationTime` interface.
+* `GetEntityByIdAsync` is used to get an entity by id, which calls `Repository.GetAsync(id)` by default.
+* `DeleteByIdAsync` is used to delete an entity by id, which calls `Repository.DeleteAsync(id)` by default.
+
+#### Object to Object Mapping
+
+These methods are used to convert Entities to DTOs and vice verse. They uses the [IObjectMapper](Object-To-Object-Mapping.md) by default.
+
+* `MapToGetOutputDtoAsync` is used to map the entity to the DTO returned from the `GetAsync`, `CreateAsync` and `UpdateAsync` methods. Alternatively, you can override the `MapToGetOutputDto` if you don't need to perform any async operation.
+* `MapToGetListOutputDtosAsync` is used to map a list of entities to a list of DTOs returned from the `GetListAsync` method. It uses the `MapToGetListOutputDtoAsync` to map each entity in the list. You can override one of them based on your case. Alternatively, you can override the `MapToGetListOutputDto` if you don't need to perform any async operation.
+* `MapToEntityAsync` method has two overloads;
+  * `MapToEntityAsync(TCreateInput)` is used to create an entity from `TCreateInput`.
+  * `MapToEntityAsync(TUpdateInput, TEntity)` is used to update an existing entity from `TUpdateInput`.
+
+## Miscellaneous
+
+### Working with Streams
+
+`Stream` object itself is not serializable. So, you may have problems if you directly use `Stream` as the parameter or the return value for your application service. ABP Framework provides a special type, `IRemoteStreamContent` to be used to get or return streams in the application services.
+
+**Example: Application Service Interface that can be used to get and return streams**
+
+````csharp
+using System;
+using System.Threading.Tasks;
+using Volo.Abp.Application.Services;
+using Volo.Abp.Content;
+
+namespace MyProject.Test
+{
+    public interface ITestAppService : IApplicationService
+    {
+        Task Upload(Guid id, IRemoteStreamContent streamContent);
+        Task<IRemoteStreamContent> Download(Guid id);
+    }
+}
+````
+
+**Example: Application Service Implementation that can be used to get and return streams**
+
+````csharp
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Volo.Abp;
+using Volo.Abp.Application.Services;
+using Volo.Abp.Content;
+
+namespace MyProject.Test
+{
+    public class TestAppService : ApplicationService, ITestAppService
+    {
+        public Task<IRemoteStreamContent> Download(Guid id)
+        {
+            var fs = new FileStream("C:\\Temp\\" + id + ".blob", FileMode.OpenOrCreate);
+            return Task.FromResult(
+                (IRemoteStreamContent) new RemoteStreamContent(fs) {
+                    ContentType = "application/octet-stream" 
+                }
+            );
+        }
+
+        public async Task Upload(Guid id, IRemoteStreamContent streamContent)
+        {
+            using (var fs = new FileStream("C:\\Temp\\" + id + ".blob", FileMode.Create))
+            {
+                await streamContent.GetStream().CopyToAsync(fs);
+                await fs.FlushAsync();
+            }
+        }
+    }
+}
+````
+
+`IRemoteStreamContent` is compatible with the [Auto API Controller](API/Auto-API-Controllers.md) and [Dynamic C# HTTP Proxy](API/Dynamic-CSharp-API-Clients.md) systems.
 
 ## Lifetime
 

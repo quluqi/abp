@@ -2,54 +2,53 @@
 ````json
 //[doc-params]
 {
-    "UI": ["MVC","NG"],
+    "UI": ["MVC","Blazor","NG"],
     "DB": ["EF","Mongo"]
 }
 ````
-{{
-if UI == "MVC"
-  UI_Text="mvc"
-else if UI == "NG"
-  UI_Text="angular"
-else
-  UI_Text="?"
-end
-if DB == "EF"
-  DB_Text="Entity Framework Core"
-else if DB == "Mongo"
-  DB_Text="MongoDB"
-else
-  DB_Text="?"
-end
-}}
-
 ## About This Tutorial
 
 In this tutorial series, you will build an ABP based web application named `Acme.BookStore`. This application is used to manage a list of books and their authors. It is developed using the following technologies:
 
-* **{{DB_Text}}** as the ORM provider. 
+* **{{DB_Value}}** as the ORM provider. 
 * **{{UI_Value}}** as the UI Framework.
 
 This tutorial is organized as the following parts;
 
-- [Part 1: Creating the project and book list page](Part-1.md)
+- [Part 1: Creating the server side](Part-1.md)
 - [Part 2: The book list page](Part-2.md)
 - [Part 3: Creating, updating and deleting books](Part-3.md)
 - **Part 4: Integration tests (this part)**
 - [Part 5: Authorization](Part-5.md)
+- [Part 6: Authors: Domain layer](Part-6.md)
+- [Part 7: Authors: Database Integration](Part-7.md)
+- [Part 8: Authors: Application Layer](Part-8.md)
+- [Part 9: Authors: User Interface](Part-9.md)
+- [Part 10: Book to Author Relation](Part-10.md)
 
 ### Download the Source Code
 
-This tutorials has multiple versions based on your **UI** and **Database** preferences. We've prepared two combinations of the source code to be downloaded:
+This tutorial has multiple versions based on your **UI** and **Database** preferences. We've prepared a few combinations of the source code to be downloaded:
 
 * [MVC (Razor Pages) UI with EF Core](https://github.com/abpframework/abp-samples/tree/master/BookStore-Mvc-EfCore)
+* [Blazor UI with EF Core](https://github.com/abpframework/abp-samples/tree/master/BookStore-Blazor-EfCore)
 * [Angular UI with MongoDB](https://github.com/abpframework/abp-samples/tree/master/BookStore-Angular-MongoDb)
+
+{{if UI == "MVC" && DB == "EF"}}
+
+### Video Tutorial
+
+This part is also recorded as a video tutorial and **<a href="https://www.youtube.com/watch?v=aidRB4YFDLM&list=PLsNclT2aHJcPNaCf7Io3DbMN6yAk_DgWJ&index=4" target="_blank">published on YouTube</a>**.
+
+{{end}}
 
 ## Test Projects in the Solution
 
 This part covers the **server side** tests. There are several test projects in the solution:
 
-![bookstore-test-projects-v2](./images/bookstore-test-projects-{{UI_Text}}.png)
+![bookstore-test-projects-v2](./images/bookstore-test-projects-mvc.png)
+
+> Test projects slightly differs based on your UI and Database selection. For example, if you select MongoDB, then the `Acme.BookStore.EntityFrameworkCore.Tests` will be `Acme.BookStore.MongoDB.Tests`.
 
 Each project is used to test the related project. Test projects use the following libraries for testing:
 
@@ -59,11 +58,11 @@ Each project is used to test the related project. Test projects use the followin
 
 {{if DB=="EF"}}
 
-> The test projects are configured to use **SQLite in-memory** as the database. A separate database instance is created and seeded (with the data seed system) to prepare a fresh database for every test.
+> The test projects are configured to use **SQLite in-memory** as the database. A separate database instance is created and seeded (with the [data seed system](../Data-Seeding.md)) to prepare a fresh database for every test.
 
 {{else if DB=="Mongo"}}
 
-> **[Mongo2Go](https://github.com/Mongo2Go/Mongo2Go)** library is used to mock the MongoDB database. A separate database instance is created and seeded (with the data seed system) to prepare a fresh database for every test.
+> **[Mongo2Go](https://github.com/Mongo2Go/Mongo2Go)** library is used to mock the MongoDB database. A separate database instance is created and seeded (with the [data seed system](../Data-Seeding.md)) to prepare a fresh database for every test.
 
 {{end}}
 
@@ -73,12 +72,15 @@ If you had created a data seed contributor as described in the [first part](Part
 
 ## Testing the BookAppService
 
-Create a test class named `BookAppService_Tests` in the `Acme.BookStore.Application.Tests` project:
+Add a new test class, named `BookAppService_Tests` in the `Books` namespace (folder) of the `Acme.BookStore.Application.Tests` project:
 
 ````csharp
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Shouldly;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Validation;
 using Xunit;
 
 namespace Acme.BookStore.Books
@@ -124,7 +126,7 @@ public async Task Should_Create_A_Valid_Book()
         {
             Name = "New test book 42",
             Price = 10,
-            PublishDate = System.DateTime.Now,
+            PublishDate = DateTime.Now,
             Type = BookType.ScienceFiction
         }
     );
@@ -206,7 +208,7 @@ namespace Acme.BookStore.Books
                 {
                     Name = "New test book 42",
                     Price = 10,
-                    PublishDate = System.DateTime.Now,
+                    PublishDate = DateTime.Now,
                     Type = BookType.ScienceFiction
                 }
             );
@@ -247,4 +249,4 @@ Congratulations, the **green icons** indicates that the tests have been successf
 
 ## The Next Part
 
-See the [next part](part-5.md) of this tutorial.
+See the [next part](Part-5.md) of this tutorial.

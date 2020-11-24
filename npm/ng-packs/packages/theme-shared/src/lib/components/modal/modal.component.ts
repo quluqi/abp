@@ -1,11 +1,13 @@
-import { takeUntilDestroy } from '@abp/ng.core';
+import { SubscriptionService } from '@abp/ng.core';
 import {
   Component,
   ContentChild,
   ElementRef,
   EventEmitter,
+  Inject,
   Input,
   OnDestroy,
+  Optional,
   Output,
   Renderer2,
   TemplateRef,
@@ -18,6 +20,7 @@ import { fadeAnimation } from '../../animations/modal.animations';
 import { Confirmation } from '../../models/confirmation';
 import { ConfirmationService } from '../../services/confirmation.service';
 import { ModalService } from '../../services/modal.service';
+import { SUPPRESS_UNSAVED_CHANGES_WARNING } from '../../tokens/suppress-unsaved-changes-warning.token';
 import { ButtonComponent } from '../button/button.component';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -27,7 +30,7 @@ export type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
   templateUrl: './modal.component.html',
   animations: [fadeAnimation],
   styleUrls: ['./modal.component.scss'],
-  providers: [ModalService],
+  providers: [ModalService, SubscriptionService],
 })
 export class ModalComponent implements OnDestroy {
   @Input()
@@ -57,14 +60,16 @@ export class ModalComponent implements OnDestroy {
 
   @Input() size: ModalSize = 'lg';
 
+  @Input() suppressUnsavedChangesWarning = this.suppressUnsavedChangesWarningToken;
+
   @ContentChild(ButtonComponent, { static: false, read: ButtonComponent })
   abpSubmit: ButtonComponent;
 
-  @ContentChild('abpHeader', {static: false}) abpHeader: TemplateRef<any>;
+  @ContentChild('abpHeader', { static: false }) abpHeader: TemplateRef<any>;
 
-  @ContentChild('abpBody', {static: false}) abpBody: TemplateRef<any>;
+  @ContentChild('abpBody', { static: false }) abpBody: TemplateRef<any>;
 
-  @ContentChild('abpFooter', {static: false}) abpFooter: TemplateRef<any>;
+  @ContentChild('abpFooter', { static: false }) abpFooter: TemplateRef<any>;
 
   @ContentChild('abpClose', { static: false, read: ElementRef })
   abpClose: ElementRef<any>;
@@ -103,14 +108,18 @@ export class ModalComponent implements OnDestroy {
     private renderer: Renderer2,
     private confirmationService: ConfirmationService,
     private modalService: ModalService,
+    private subscription: SubscriptionService,
+    @Optional()
+    @Inject(SUPPRESS_UNSAVED_CHANGES_WARNING)
+    private suppressUnsavedChangesWarningToken: boolean,
   ) {
     this.initToggleStream();
   }
 
   private initToggleStream() {
-    this.toggle$
-      .pipe(takeUntilDestroy(this), debounceTime(0), distinctUntilChanged())
-      .subscribe(value => this.toggle(value));
+    this.subscription.addOne(this.toggle$.pipe(debounceTime(0), distinctUntilChanged()), value =>
+      this.toggle(value),
+    );
   }
 
   private toggle(value: boolean) {
@@ -138,7 +147,7 @@ export class ModalComponent implements OnDestroy {
   close() {
     if (this.busy) return;
 
-    if (this.isFormDirty) {
+    if (this.isFormDirty && !this.suppressUnsavedChangesWarning) {
       if (this.isConfirmationOpen) return;
 
       this.isConfirmationOpen = true;

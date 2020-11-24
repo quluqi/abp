@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -20,7 +21,7 @@ namespace MyCompanyName.MyProjectName
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
                 .Enrich.FromLogContext()
                 .WriteTo.Async(c => c.File("Logs/logs.txt"))
-                .WriteTo.Console()
+                .WriteTo.Async(c => c.Console())
                 .CreateLogger();
 
             try
@@ -43,9 +44,15 @@ namespace MyCompanyName.MyProjectName
 
         internal static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .UseAutofac()
+                .UseSerilog()
+                .ConfigureAppConfiguration((context, config) =>
+                {
+                    //setup your additional configuration sources
+                })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddHostedService<MyProjectNameHostedService>();
+                    services.AddApplication<MyProjectNameModule>();
                 });
     }
 }

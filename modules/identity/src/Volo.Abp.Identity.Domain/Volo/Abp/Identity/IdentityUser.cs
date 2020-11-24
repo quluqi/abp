@@ -30,11 +30,13 @@ namespace Volo.Abp.Identity
         /// <summary>
         /// Gets or sets the Name for the user.
         /// </summary>
+        [CanBeNull]
         public virtual string Name { get; set; }
 
         /// <summary>
         /// Gets or sets the Surname for the user.
         /// </summary>
+        [CanBeNull]
         public virtual string Surname { get; set; }
 
         /// <summary>
@@ -66,9 +68,12 @@ namespace Volo.Abp.Identity
         [DisableAuditing]
         public virtual string SecurityStamp { get; protected internal set; }
 
+        public virtual bool IsExternal { get; set; }
+
         /// <summary>
         /// Gets or sets a telephone number for the user.
         /// </summary>
+        [CanBeNull]
         public virtual string PhoneNumber { get; protected internal set; }
 
         /// <summary>
@@ -133,12 +138,16 @@ namespace Volo.Abp.Identity
         {
         }
 
-        public IdentityUser(Guid id, [NotNull] string userName, [NotNull] string email, Guid? tenantId = null)
+        public IdentityUser(
+            Guid id,
+            [NotNull] string userName,
+            [NotNull] string email,
+            Guid? tenantId = null)
+            : base(id)
         {
             Check.NotNull(userName, nameof(userName));
             Check.NotNull(email, nameof(email));
 
-            Id = id;
             TenantId = tenantId;
             UserName = userName;
             NormalizedUserName = userName.ToUpperInvariant();
@@ -152,8 +161,6 @@ namespace Volo.Abp.Identity
             Logins = new Collection<IdentityUserLogin>();
             Tokens = new Collection<IdentityUserToken>();
             OrganizationUnits = new Collection<IdentityUserOrganizationUnit>();
-
-            ExtraProperties = new Dictionary<string, object>();
         }
 
         public virtual void AddRole(Guid roleId)
@@ -254,7 +261,8 @@ namespace Volo.Abp.Identity
             Check.NotNull(loginProvider, nameof(loginProvider));
             Check.NotNull(providerKey, nameof(providerKey));
 
-            Logins.RemoveAll(userLogin => userLogin.LoginProvider == loginProvider && userLogin.ProviderKey == providerKey);
+            Logins.RemoveAll(userLogin =>
+                userLogin.LoginProvider == loginProvider && userLogin.ProviderKey == providerKey);
         }
 
         [CanBeNull]
@@ -316,9 +324,37 @@ namespace Volo.Abp.Identity
             );
         }
 
+        /// <summary>
+        /// Use <see cref="IdentityUserManager.ConfirmEmailAsync"/> for regular email confirmation.
+        /// Using this skips the confirmation process and directly sets the <see cref="EmailConfirmed"/>.
+        /// </summary>
+        public virtual void SetEmailConfirmed(bool confirmed)
+        {
+            EmailConfirmed = confirmed;
+        }
+
+        public virtual void SetPhoneNumberConfirmed(bool confirmed)
+        {
+            PhoneNumberConfirmed = confirmed;
+        }
+
         public override string ToString()
         {
             return $"{base.ToString()}, UserName = {UserName}";
+        }
+
+        /// <summary>
+        /// Normally use <see cref="IdentityUserManager.ChangePhoneNumberAsync"/> to change the phone number
+        /// in the application code.
+        /// This method is to directly set it with a confirmation information.
+        /// </summary>
+        /// <param name="phoneNumber"></param>
+        /// <param name="confirmed"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        public void SetPhoneNumber(string phoneNumber, bool confirmed)
+        {
+            PhoneNumber = phoneNumber;
+            PhoneNumberConfirmed = !phoneNumber.IsNullOrWhiteSpace() && confirmed;
         }
     }
 }

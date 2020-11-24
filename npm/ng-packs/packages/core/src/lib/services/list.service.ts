@@ -1,15 +1,24 @@
 import { Inject, Injectable, OnDestroy, Optional } from '@angular/core';
-import { BehaviorSubject, Observable, of, ReplaySubject } from 'rxjs';
-import { catchError, debounceTime, filter, shareReplay, switchMap, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of, ReplaySubject, Subject } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  filter,
+  shareReplay,
+  switchMap,
+  takeUntil,
+  tap,
+} from 'rxjs/operators';
 import { ABP } from '../models/common';
 import { PagedResultDto } from '../models/dtos';
 import { LIST_QUERY_DEBOUNCE_TIME } from '../tokens/list.token';
-import { takeUntilDestroy } from '../utils/rxjs-utils';
 
 @Injectable()
 export class ListService<QueryParamsType = ABP.PageQueryParams> implements OnDestroy {
   private _filter = '';
   set filter(value: string) {
+    if (this._filter !== value) this._page = 0;
+
     this._filter = value;
     this.get();
   }
@@ -65,6 +74,8 @@ export class ListService<QueryParamsType = ABP.PageQueryParams> implements OnDes
 
   private _isLoading$ = new BehaviorSubject(false);
 
+  private destroy$ = new Subject();
+
   get isLoading$(): Observable<boolean> {
     return this._isLoading$.asObservable();
   }
@@ -92,11 +103,13 @@ export class ListService<QueryParamsType = ABP.PageQueryParams> implements OnDes
       filter(Boolean),
       tap(() => this._isLoading$.next(false)),
       shareReplay({ bufferSize: 1, refCount: true }),
-      takeUntilDestroy(this),
+      takeUntil(this.destroy$),
     );
   }
 
-  ngOnDestroy() {}
+  ngOnDestroy() {
+    this.destroy$.next();
+  }
 }
 
 export type QueryStreamCreatorCallback<T, QueryParamsType = ABP.PageQueryParams> = (

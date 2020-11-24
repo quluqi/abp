@@ -1,14 +1,13 @@
-import { Component, Injector, OnDestroy, Optional, SkipSelf, Type } from '@angular/core';
+import { Component, Injector, Optional, SkipSelf, Type } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { Store } from '@ngxs/store';
 import { eLayoutType } from '../enums/common';
 import { ABP } from '../models';
 import { ReplaceableComponents } from '../models/replaceable-components';
 import { LocalizationService } from '../services/localization.service';
+import { ReplaceableComponentsService } from '../services/replaceable-components.service';
 import { RoutesService } from '../services/routes.service';
-import { ReplaceableComponentsState } from '../states/replaceable-components.state';
+import { SubscriptionService } from '../services/subscription.service';
 import { findRoute, getRoutePath } from '../utils/route-utils';
-import { takeUntilDestroy } from '../utils/rxjs-utils';
 import { TreeNode } from '../utils/tree-utils';
 
 @Component({
@@ -20,8 +19,9 @@ import { TreeNode } from '../utils/tree-utils';
       ><ng-container *ngIf="isLayoutVisible" [ngComponentOutlet]="layout"></ng-container
     ></ng-template>
   `,
+  providers: [SubscriptionService],
 })
-export class DynamicLayoutComponent implements OnDestroy {
+export class DynamicLayoutComponent {
   layout: Type<any>;
 
   // TODO: Consider a shared enum (eThemeSharedComponents) for known layouts
@@ -36,7 +36,8 @@ export class DynamicLayoutComponent implements OnDestroy {
   constructor(
     injector: Injector,
     private localizationService: LocalizationService,
-    private store: Store,
+    private replaceableComponents: ReplaceableComponentsService,
+    private subscription: SubscriptionService,
     @Optional() @SkipSelf() dynamicLayoutComponent: DynamicLayoutComponent,
   ) {
     if (dynamicLayoutComponent) return;
@@ -44,7 +45,7 @@ export class DynamicLayoutComponent implements OnDestroy {
     const router = injector.get(Router);
     const routes = injector.get(RoutesService);
 
-    router.events.pipe(takeUntilDestroy(this)).subscribe(event => {
+    this.subscription.addOne(router.events, event => {
       if (event instanceof NavigationEnd) {
         let expectedLayout = (route.snapshot.data || {}).layout;
 
@@ -65,7 +66,7 @@ export class DynamicLayoutComponent implements OnDestroy {
         if (!expectedLayout) expectedLayout = eLayoutType.empty;
 
         const key = this.layouts.get(expectedLayout);
-        this.layout = this.getComponent(key).component;
+        this.layout = this.getComponent(key)?.component;
       }
     });
 
@@ -73,15 +74,13 @@ export class DynamicLayoutComponent implements OnDestroy {
   }
 
   private listenToLanguageChange() {
-    this.localizationService.languageChange.pipe(takeUntilDestroy(this)).subscribe(() => {
+    this.subscription.addOne(this.localizationService.languageChange$, () => {
       this.isLayoutVisible = false;
       setTimeout(() => (this.isLayoutVisible = true), 0);
     });
   }
 
   private getComponent(key: string): ReplaceableComponents.ReplaceableComponent {
-    return this.store.selectSnapshot(ReplaceableComponentsState.getComponent(key));
+    return this.replaceableComponents.get(key);
   }
-
-  ngOnDestroy() {}
 }

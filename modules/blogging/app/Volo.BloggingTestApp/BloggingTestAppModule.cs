@@ -1,4 +1,4 @@
-﻿//#define MONGODB
+//#define MONGODB
 
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Volo.Abp;
+using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc.UI;
 using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap;
@@ -22,6 +23,8 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Mvc.UI.Theming;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Autofac;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Database;
 using Volo.Abp.Data;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.Identity;
@@ -36,7 +39,6 @@ using Volo.Blogging;
 using Volo.Blogging.Admin;
 using Volo.Blogging.Files;
 using Volo.BloggingTestApp.EntityFrameworkCore;
-using Volo.BloggingTestApp.MongoDB;
 
 namespace Volo.BloggingTestApp
 {
@@ -51,10 +53,12 @@ namespace Volo.BloggingTestApp
         typeof(BloggingTestAppEntityFrameworkCoreModule),
 #endif
         typeof(AbpAccountWebModule),
+        typeof(AbpAccountApplicationModule),
         typeof(AbpIdentityWebModule),
         typeof(AbpIdentityApplicationModule),
         typeof(AbpPermissionManagementDomainIdentityModule),
         typeof(AbpPermissionManagementApplicationModule),
+        typeof(BlobStoringDatabaseDomainModule),
         typeof(AbpAutofacModule),
         typeof(AbpAspNetCoreMvcUiBasicThemeModule)
     )]
@@ -128,9 +132,12 @@ namespace Volo.BloggingTestApp
                 options.DefaultThemeName = BasicTheme.Name;
             });
 
-            Configure<BlogFileOptions>(options =>
+            Configure<AbpBlobStoringOptions>(options =>
             {
-                options.FileUploadLocalFolder = Path.Combine(hostingEnvironment.WebRootPath, "files");
+                options.Containers.ConfigureDefault(container =>
+                {
+                    container.UseDatabase();
+                });
             });
         }
 

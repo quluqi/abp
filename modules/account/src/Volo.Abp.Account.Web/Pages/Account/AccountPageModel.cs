@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Account.Localization;
 using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
-using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
@@ -13,9 +12,10 @@ namespace Volo.Abp.Account.Web.Pages.Account
 {
     public abstract class AccountPageModel : AbpPageModel
     {
+        public IAccountAppService AccountAppService { get; set; }
         public SignInManager<IdentityUser> SignInManager { get; set; }
         public IdentityUserManager UserManager { get; set; }
-        public ILocalEventBus LocalEventBus { get; set; }
+        public IdentitySecurityLogManager IdentitySecurityLogManager { get; set; }
 
         protected AccountPageModel()
         {

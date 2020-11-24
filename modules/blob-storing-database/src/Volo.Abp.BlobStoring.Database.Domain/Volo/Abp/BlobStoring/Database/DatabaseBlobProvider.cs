@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Guids;
+using Volo.Abp.MultiTenancy;
 
 namespace Volo.Abp.BlobStoring.Database
 {
@@ -11,18 +12,21 @@ namespace Volo.Abp.BlobStoring.Database
         protected IDatabaseBlobRepository DatabaseBlobRepository { get; }
         protected IDatabaseBlobContainerRepository DatabaseBlobContainerRepository { get; }
         protected IGuidGenerator GuidGenerator { get; }
+        protected ICurrentTenant CurrentTenant { get; }
 
         public DatabaseBlobProvider(
             IDatabaseBlobRepository databaseBlobRepository,
             IDatabaseBlobContainerRepository databaseBlobContainerRepository,
-            IGuidGenerator guidGenerator)
+            IGuidGenerator guidGenerator,
+            ICurrentTenant currentTenant)
         {
             DatabaseBlobRepository = databaseBlobRepository;
             DatabaseBlobContainerRepository = databaseBlobContainerRepository;
             GuidGenerator = guidGenerator;
+            CurrentTenant = currentTenant;
         }
 
-        public override async Task SaveAsync(BlobProviderSaveArgs args)
+        public async override Task SaveAsync(BlobProviderSaveArgs args)
         {
             var container = await GetOrCreateContainerAsync(args.ContainerName, args.CancellationToken);
 
@@ -48,12 +52,12 @@ namespace Volo.Abp.BlobStoring.Database
             }
             else
             {
-                blob = new DatabaseBlob(GuidGenerator.Create(), container.Id, args.BlobName, content);
+                blob = new DatabaseBlob(GuidGenerator.Create(), container.Id, args.BlobName, content, CurrentTenant.Id);
                 await DatabaseBlobRepository.InsertAsync(blob, autoSave: true);
             }
         }
 
-        public override async Task<bool> DeleteAsync(BlobProviderDeleteArgs args)
+        public async override Task<bool> DeleteAsync(BlobProviderDeleteArgs args)
         {
             var container = await DatabaseBlobContainerRepository.FindAsync(
                 args.ContainerName,
@@ -73,7 +77,7 @@ namespace Volo.Abp.BlobStoring.Database
             );
         }
 
-        public override async Task<bool> ExistsAsync(BlobProviderExistsArgs args)
+        public async override Task<bool> ExistsAsync(BlobProviderExistsArgs args)
         {
             var container = await DatabaseBlobContainerRepository.FindAsync(
                 args.ContainerName,
@@ -92,7 +96,7 @@ namespace Volo.Abp.BlobStoring.Database
             );
         }
 
-        public override async Task<Stream> GetOrNullAsync(BlobProviderGetArgs args)
+        public async override Task<Stream> GetOrNullAsync(BlobProviderGetArgs args)
         {
             var container = await DatabaseBlobContainerRepository.FindAsync(
                 args.ContainerName,
@@ -128,7 +132,7 @@ namespace Volo.Abp.BlobStoring.Database
                 return container;
             }
 
-            container = new DatabaseBlobContainer(GuidGenerator.Create(), name);
+            container = new DatabaseBlobContainer(GuidGenerator.Create(), name, CurrentTenant.Id);
             await DatabaseBlobContainerRepository.InsertAsync(container, cancellationToken: cancellationToken);
 
             return container;

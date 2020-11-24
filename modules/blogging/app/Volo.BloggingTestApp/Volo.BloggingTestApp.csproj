@@ -3,7 +3,7 @@
   <Import Project="..\..\..\..\configureawait.props" />
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
   </PropertyGroup>
 
@@ -17,7 +17,7 @@
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.3.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.5.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,7 +33,8 @@
     <ProjectReference Include="..\..\..\..\modules\identity\src\Volo.Abp.PermissionManagement.Domain.Identity\Volo.Abp.PermissionManagement.Domain.Identity.csproj" />
     <ProjectReference Include="..\..\..\..\modules\permission-management\src\Volo.Abp.PermissionManagement.Application\Volo.Abp.PermissionManagement.Application.csproj" />
     <ProjectReference Include="..\..\..\..\modules\account\src\Volo.Abp.Account.Web\Volo.Abp.Account.Web.csproj" />
-    <ProjectReference Include="..\Volo.BloggingTestApp.MongoDB\Volo.BloggingTestApp.MongoDB.csproj" />
+    <ProjectReference Include="..\..\..\..\modules\account\src\Volo.Abp.Account.Application\Volo.Abp.Account.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\modules\blob-storing-database\src\Volo.Abp.BlobStoring.Database.Domain\Volo.Abp.BlobStoring.Database.Domain.csproj" />
   </ItemGroup>
 
 </Project>

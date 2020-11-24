@@ -4,7 +4,7 @@
   <Import Project="..\..\..\..\common.props" />
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <AssemblyName>Volo.ClientSimulation.Web</AssemblyName>
     <PackageId>Volo.ClientSimulation.Web</PackageId>
     <OutputType>Library</OutputType>
@@ -23,9 +23,15 @@
     <EmbeddedResource Include="Pages\**\*.js" />
     <EmbeddedResource Include="Pages\**\*.css" />
     <EmbeddedResource Include="Pages\**\*.scss" />
+    <EmbeddedResource Include="Components\**\*.js" />
+    <EmbeddedResource Include="Components\**\*.css" />
+    <EmbeddedResource Include="Components\**\*.scss" />
     <Content Remove="Pages\**\*.js" />
     <Content Remove="Pages\**\*.css" />
     <Content Remove="Pages\**\*.scss" />
+    <Content Remove="Components\**\*.js" />
+    <Content Remove="Components\**\*.css" />
+    <Content Remove="Components\**\*.scss" />
     <Content Remove="compilerconfig.json" />
     <None Include="compilerconfig.json" />
   </ItemGroup>

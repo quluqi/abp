@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -21,6 +23,7 @@ using Volo.Abp.EntityFrameworkCore.EntityHistory;
 using Volo.Abp.EntityFrameworkCore.Modeling;
 using Volo.Abp.EntityFrameworkCore.ValueConverters;
 using Volo.Abp.Guids;
+using Volo.Abp.Localization;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.ObjectExtending;
 using Volo.Abp.Reflection;
@@ -145,7 +148,7 @@ namespace Volo.Abp.EntityFrameworkCore
             }
         }
 
-        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        public async override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -180,6 +183,14 @@ namespace Volo.Abp.EntityFrameworkCore
             {
                 ChangeTracker.AutoDetectChangesEnabled = true;
             }
+        }
+
+        /// <summary>
+        /// This method will call the DbContext <see cref="SaveChangesAsync(bool, CancellationToken)"/> method directly of EF Core, which doesn't apply concepts of abp.
+        /// </summary>
+        public virtual Task<int> SaveChangesOnDbContextAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
         public virtual void Initialize(AbpEfCoreDbContextInitializationContext initializationContext)
@@ -314,7 +325,38 @@ namespace Volo.Abp.EntityFrameworkCore
                     continue;
                 }
 
-                entry.Property(property.Name).CurrentValue = entity.GetProperty(property.Name);
+                var entryProperty = entry.Property(property.Name);
+                var entityProperty = entity.GetProperty(property.Name);
+                if (entityProperty == null)
+                {
+                    entryProperty.CurrentValue = null;
+                    continue;
+                }
+
+                if (entryProperty.Metadata.ClrType == entityProperty.GetType())
+                {
+                    entryProperty.CurrentValue = entityProperty;
+                }
+                else
+                {
+                    if (TypeHelper.IsPrimitiveExtended(entryProperty.Metadata.ClrType, includeEnums: true))
+                    {
+                        var conversionType = entryProperty.Metadata.ClrType;
+                        if (TypeHelper.IsNullable(conversionType))
+                        {
+                            conversionType = conversionType.GetFirstGenericArgumentIfNullable();
+                        }
+
+                        if (conversionType == typeof(Guid))
+                        {
+                            entryProperty.CurrentValue = TypeDescriptor.GetConverter(conversionType).ConvertFromInvariantString(entityProperty.ToString());
+                        }
+                        else
+                        {
+                            entryProperty.CurrentValue = Convert.ChangeType(entityProperty, conversionType, CultureInfo.InvariantCulture);
+                        }
+                    }
+                }
             }
         }
 

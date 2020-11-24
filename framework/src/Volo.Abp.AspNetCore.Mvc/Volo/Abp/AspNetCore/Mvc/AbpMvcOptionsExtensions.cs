@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AspNetCore.Mvc.Auditing;
+using Volo.Abp.AspNetCore.Mvc.Content;
 using Volo.Abp.AspNetCore.Mvc.Conventions;
 using Volo.Abp.AspNetCore.Mvc.ExceptionHandling;
 using Volo.Abp.AspNetCore.Mvc.Features;
+using Volo.Abp.AspNetCore.Mvc.GlobalFeatures;
 using Volo.Abp.AspNetCore.Mvc.ModelBinding;
 using Volo.Abp.AspNetCore.Mvc.Response;
 using Volo.Abp.AspNetCore.Mvc.Uow;
@@ -20,6 +22,13 @@ namespace Volo.Abp.AspNetCore.Mvc
             AddPageFilters(options);
             AddModelBinders(options);
             AddMetadataProviders(options, services);
+            AddFormatters(options);
+        }
+
+        private static void AddFormatters(MvcOptions options)
+        {
+            options.InputFormatters.Insert(0, new RemoteStreamContentInputFormatter());
+            options.OutputFormatters.Insert(0, new RemoteStreamContentOutputFormatter());
         }
 
         private static void AddConventions(MvcOptions options, IServiceCollection services)
@@ -29,6 +38,7 @@ namespace Volo.Abp.AspNetCore.Mvc
 
         private static void AddActionFilters(MvcOptions options)
         {
+            options.Filters.AddService(typeof(GlobalFeatureActionFilter));
             options.Filters.AddService(typeof(AbpAuditActionFilter));
             options.Filters.AddService(typeof(AbpNoContentActionFilter));
             options.Filters.AddService(typeof(AbpFeatureActionFilter));
@@ -39,6 +49,7 @@ namespace Volo.Abp.AspNetCore.Mvc
 
         private static void AddPageFilters(MvcOptions options)
         {
+            options.Filters.AddService(typeof(GlobalFeaturePageFilter));
             options.Filters.AddService(typeof(AbpExceptionPageFilter));
             options.Filters.AddService(typeof(AbpAuditPageFilter));
             options.Filters.AddService(typeof(AbpFeaturePageFilter));
@@ -48,7 +59,7 @@ namespace Volo.Abp.AspNetCore.Mvc
         private static void AddModelBinders(MvcOptions options)
         {
             options.ModelBinderProviders.Insert(0, new AbpDateTimeModelBinderProvider());
-            options.ModelBinderProviders.Insert(0, new AbpExtraPropertiesDictionaryModelBinderProvider());
+            options.ModelBinderProviders.Insert(1, new AbpExtraPropertiesDictionaryModelBinderProvider());
         }
 
         private static void AddMetadataProviders(MvcOptions options, IServiceCollection services)

@@ -2,12 +2,16 @@ import { HttpClient } from '@angular/common/http';
 import { createServiceFactory, SpectatorService, SpyObject } from '@ngneat/spectator/jest';
 import { Store } from '@ngxs/store';
 import { of, ReplaySubject, timer } from 'rxjs';
-import { SetLanguage } from '../actions';
+import { ApplicationConfiguration } from '../models/application-configuration';
 import { Config } from '../models/config';
-import { ApplicationConfigurationService, ConfigStateService } from '../services';
+import {
+  ApplicationConfigurationService,
+  ConfigStateService,
+  SessionStateService,
+} from '../services';
 import { ConfigState } from '../states';
 
-export const CONFIG_STATE_DATA = {
+export const CONFIG_STATE_DATA = ({
   environment: {
     production: false,
     application: {
@@ -91,11 +95,14 @@ export const CONFIG_STATE_DATA = {
     userName: null,
     email: null,
     roles: [],
-  },
+  } as ApplicationConfiguration.CurrentUser,
   features: {
-    values: {},
+    values: {
+      'Chat.Enable': 'True',
+    },
   },
-} as Config.State;
+  registerLocaleFn: () => Promise.resolve(),
+} as any) as Config.State;
 
 describe('ConfigState', () => {
   let spectator: SpectatorService<ConfigStateService>;
@@ -112,7 +119,11 @@ describe('ConfigState', () => {
     spectator = createService();
     store = spectator.inject(Store);
     service = spectator.service;
-    state = new ConfigState(spectator.inject(HttpClient), store);
+    state = new ConfigState(
+      spectator.inject(HttpClient),
+      store,
+      spectator.inject(SessionStateService),
+    );
   });
 
   describe('#getAll', () => {
@@ -159,6 +170,14 @@ describe('ConfigState', () => {
       );
       expect(ConfigState.getApiUrl()(CONFIG_STATE_DATA)).toEqual(
         CONFIG_STATE_DATA.environment.apis.default.url,
+      );
+    });
+  });
+
+  describe('#getFeature', () => {
+    it('should return a setting', () => {
+      expect(ConfigState.getFeature('Chat.Enable')(CONFIG_STATE_DATA)).toEqual(
+        CONFIG_STATE_DATA.features.values['Chat.Enable'],
       );
     });
   });
@@ -238,8 +257,7 @@ describe('ConfigState', () => {
       let dispatchArg;
 
       const configuration = {
-        setting: { values: { 'Abp.Localization.DefaultLanguage': 'tr;TR' } },
-        localization: { currentCulture: {} },
+        localization: { currentCulture: { cultureName: 'en;EN' } },
       };
 
       const res$ = new ReplaySubject(1);
@@ -257,8 +275,6 @@ describe('ConfigState', () => {
 
       timer(0).subscribe(() => {
         expect(patchStateArg).toEqual(configuration);
-        expect(dispatchArg instanceof SetLanguage).toBeTruthy();
-        expect(dispatchArg).toEqual({ payload: 'tr', dispatchAppConfiguration: false });
         done();
       });
     });

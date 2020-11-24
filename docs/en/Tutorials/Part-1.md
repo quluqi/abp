@@ -2,32 +2,15 @@
 ````json
 //[doc-params]
 {
-    "UI": ["MVC","NG"],
+    "UI": ["MVC","Blazor","NG"],
     "DB": ["EF","Mongo"]
 }
 ````
-{{
-if UI == "MVC"
-  UI_Text="mvc"
-else if UI == "NG"
-  UI_Text="angular"
-else
-  UI_Text="?"
-end
-if DB == "EF"
-  DB_Text="Entity Framework Core"
-else if DB == "Mongo"
-  DB_Text="MongoDB"
-else
-  DB_Text="?"
-end
-}}
-
 ## About This Tutorial
 
 In this tutorial series, you will build an ABP based web application named `Acme.BookStore`. This application is used to manage a list of books and their authors. It is developed using the following technologies:
 
-* **{{DB_Text}}** as the ORM provider. 
+* **{{DB_Value}}** as the database provider.
 * **{{UI_Value}}** as the UI Framework.
 
 This tutorial is organized as the following parts;
@@ -37,13 +20,27 @@ This tutorial is organized as the following parts;
 - [Part 3: Creating, updating and deleting books](Part-3.md)
 - [Part 4: Integration tests](Part-4.md)
 - [Part 5: Authorization](Part-5.md)
+- [Part 6: Authors: Domain layer](Part-6.md)
+- [Part 7: Authors: Database Integration](Part-7.md)
+- [Part 8: Authors: Application Layer](Part-8.md)
+- [Part 9: Authors: User Interface](Part-9.md)
+- [Part 10: Book to Author Relation](Part-10.md)
 
 ### Download the Source Code
 
-This tutorials has multiple versions based on your **UI** and **Database** preferences. We've prepared two combinations of the source code to be downloaded:
+This tutorial has multiple versions based on your **UI** and **Database** preferences. We've prepared a few combinations of the source code to be downloaded:
 
 * [MVC (Razor Pages) UI with EF Core](https://github.com/abpframework/abp-samples/tree/master/BookStore-Mvc-EfCore)
+* [Blazor UI with EF Core](https://github.com/abpframework/abp-samples/tree/master/BookStore-Blazor-EfCore)
 * [Angular UI with MongoDB](https://github.com/abpframework/abp-samples/tree/master/BookStore-Angular-MongoDb)
+
+{{if UI == "MVC" && DB == "EF"}}
+
+### Video Tutorial
+
+This part is also recorded as a video tutorial and **<a href="https://www.youtube.com/watch?v=cJzyIFfAlp8&list=PLsNclT2aHJcPNaCf7Io3DbMN6yAk_DgWJ&index=1" target="_blank">published on YouTube</a>**.
+
+{{end}}
 
 ## Creating the Solution
 
@@ -87,7 +84,7 @@ namespace Acme.BookStore.Books
 
 ### BookType Enum
 
-The `Book` entity uses the `BookType` enum. Create the `BookType` in the `Acme.BookStore.Domain.Shared` project:
+The `Book` entity uses the `BookType` enum. Create a `Books` folder (namespace) in the `Acme.BookStore.Domain.Shared` project and add a `BookType` inside it:
 
 ````csharp
 namespace Acme.BookStore.Books
@@ -204,7 +201,7 @@ Before updating the database, read the section below to learn how to seed some i
 
 > It's good to have some initial data in the database before running the application. This section introduces the [Data Seeding](../Data-Seeding.md) system of the ABP framework. You can skip this section if you don't want to create seed data, but it is suggested to follow it to learn this useful ABP Framework feature.
 
-Create a class deriving from the `IDataSeedContributor` in the `*.Domain` project and copy the following code:
+Create a class deriving from the `IDataSeedContributor` in the `*.Domain` project by copying the following code:
 
 ```csharp
 using System;
@@ -228,32 +225,30 @@ namespace Acme.BookStore
 
         public async Task SeedAsync(DataSeedContext context)
         {
-            if (await _bookRepository.GetCountAsync() > 0)
+            if (await _bookRepository.GetCountAsync() <= 0)
             {
-                return;
+                await _bookRepository.InsertAsync(
+                    new Book
+                    {
+                        Name = "1984",
+                        Type = BookType.Dystopia,
+                        PublishDate = new DateTime(1949, 6, 8),
+                        Price = 19.84f
+                    },
+                    autoSave: true
+                );
+
+                await _bookRepository.InsertAsync(
+                    new Book
+                    {
+                        Name = "The Hitchhiker's Guide to the Galaxy",
+                        Type = BookType.ScienceFiction,
+                        PublishDate = new DateTime(1995, 9, 27),
+                        Price = 42.0f
+                    },
+                    autoSave: true
+                );
             }
-
-            await _bookRepository.InsertAsync(
-                new Book
-                {
-                    Name = "1984",
-                    Type = BookType.Dystopia,
-                    PublishDate = new DateTime(1949, 6, 8),
-                    Price = 19.84f
-                },
-                autoSave: true
-            );
-
-            await _bookRepository.InsertAsync(
-                new Book
-                {
-                    Name = "The Hitchhiker's Guide to the Galaxy",
-                    Type = BookType.ScienceFiction,
-                    PublishDate = new DateTime(1995, 9, 27),
-                    Price = 42.0f
-                },
-                autoSave: true
-            );
         }
     }
 }
@@ -267,17 +262,8 @@ Run the `Acme.BookStore.DbMigrator` application to update the database:
 
 ![bookstore-dbmigrator-on-solution](images/bookstore-dbmigrator-on-solution.png)
 
-{{if DB == "EF"}}
 
 `.DbMigrator` is a console application that can be run to **migrate the database schema** and **seed the data** on **development** and **production** environments.
-
-{{end}}
-
-{{if DB == "Mongo"}}
-
-While MongoDB **doesn't require** a database schema migration, it is still good to run this application since it **seeds the initial data** on the database. This application can be used on **development** and **production** environments.
-
-{{end}}
 
 ## Create the Application Service
 
@@ -290,7 +276,7 @@ In this section, you will create an application service to get, create, update a
 
 ### BookDto
 
-`CrudAppService` base class requires to define the fundamental DTOs for the entity. Create a DTO class named `BookDto` into the `Acme.BookStore.Application.Contracts` project:
+`CrudAppService` base class requires to define the fundamental DTOs for the entity. Create a `Books` folder (namespace) in the `Acme.BookStore.Application.Contracts` project and add a `BookDto` class inside it:
 
 ````csharp
 using System;
@@ -337,7 +323,7 @@ namespace Acme.BookStore
 
 ### CreateUpdateBookDto
 
-Create another DTO class named `CreateUpdateBookDto` into the `Acme.BookStore.Application.Contracts` project:
+Create a `CreateUpdateBookDto` class in the `Books` folder (namespace) of the `Acme.BookStore.Application.Contracts` project:
 
 ````csharp
 using System;
@@ -388,7 +374,7 @@ namespace Acme.BookStore
 
 ### IBookAppService
 
-Next step is to define an interface for the application service. Create an interface named `IBookAppService` in the `Acme.BookStore.Application.Contracts` project:
+Next step is to define an interface for the application service. Create an `IBookAppService` interface in the `Books` folder (namespace) of the `Acme.BookStore.Application.Contracts` project:
 
 ````csharp
 using System;
@@ -415,7 +401,7 @@ namespace Acme.BookStore.Books
 
 ### BookAppService
 
-Implement the `IBookAppService`, as named `BookAppService`, in the `Acme.BookStore.Application` project:
+It is time to implement the `IBookAppService` interface. Create a new class, named `BookAppService` in the `Books` namespace (folder) of the `Acme.BookStore.Application` project:
 
 ````csharp
 using System;
@@ -455,7 +441,7 @@ ABP can [**automagically**](../API/Auto-API-Controllers.md) configures your appl
 
 ### Swagger UI
 
-The startup template is configured to run the [Swagger UI](https://swagger.io/tools/swagger-ui/) using the [Swashbuckle.AspNetCore](https://github.com/domaindrivendev/Swashbuckle.AspNetCore) library. Run the application by pressing `CTRL+F5` and navigate to `https://localhost:<port>/swagger/` on your browser. (Replace `<port>` with your own port number.)
+The startup template is configured to run the [Swagger UI](https://swagger.io/tools/swagger-ui/) using the [Swashbuckle.AspNetCore](https://github.com/domaindrivendev/Swashbuckle.AspNetCore) library. Run the application ({{if UI=="MVC"}}`Acme.BookStore.Web`{{else}}`Acme.BookStore.HttpApi.Host`{{end}}) by pressing `CTRL+F5` and navigate to `https://localhost:<port>/swagger/` on your browser. Replace `<port>` with your own port number.
 
 You will see some built-in service endpoints as well as the `Book` service and its REST-style endpoints:
 

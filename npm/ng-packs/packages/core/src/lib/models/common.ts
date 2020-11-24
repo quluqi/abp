@@ -2,11 +2,12 @@ import { EventEmitter, Type } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { eLayoutType } from '../enums/common';
-import { Config } from './config';
+import { Environment } from './environment';
 
 export namespace ABP {
   export interface Root {
-    environment: Partial<Config.Environment>;
+    environment: Partial<Environment>;
+    registerLocaleFn: (locale: string) => Promise<any>;
     skipGetAppConfiguration?: boolean;
     sendNullsAsQueryParam?: boolean;
   }
@@ -28,6 +29,11 @@ export namespace ABP {
     sorting?: string;
     skipCount?: number;
     maxResultCount?: number;
+  }
+
+  export interface Lookup {
+    id: string;
+    displayName: string;
   }
 
   export interface Nav {

@@ -2,14 +2,11 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using ICSharpCode.SharpZipLib.Core;
-using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Volo.Abp.Cli.Args;
 using Volo.Abp.Cli.Commands.Services;
 using Volo.Abp.Cli.ProjectBuilding;
-using Volo.Abp.Cli.ProjectBuilding.Building;
 using Volo.Abp.DependencyInjection;
 
 namespace Volo.Abp.Cli.Commands
@@ -61,7 +58,7 @@ namespace Volo.Abp.Cli.Commands
             }
 
             commandLineArgs.Options.Add(CliConsts.Command, commandLineArgs.Command);
-            
+
             await _sourceCodeDownloadService.DownloadAsync(
                 commandLineArgs.Target, outputFolder, version, gitHubAbpLocalRepositoryPath, gitHubVoloLocalRepositoryPath, commandLineArgs.Options);
         }
@@ -99,6 +96,7 @@ namespace Volo.Abp.Cli.Commands
             sb.AppendLine("");
             sb.AppendLine("-o|--output-folder <output-folder>          (default: current folder)");
             sb.AppendLine("-v|--version <version>                      (default: latest version)");
+            sb.AppendLine("--preview                                   (Use latest pre-release version if there is at least one pre-release after latest stable version)");
             sb.AppendLine("");
             sb.AppendLine("Examples:");
             sb.AppendLine("");
@@ -137,6 +135,11 @@ namespace Volo.Abp.Cli.Commands
             {
                 public const string Short = "v";
                 public const string Long = "version";
+            }
+
+            public static class Preview
+            {
+                public const string Long = "preview";
             }
         }
     }

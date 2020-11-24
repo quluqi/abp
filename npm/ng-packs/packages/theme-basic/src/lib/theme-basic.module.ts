@@ -42,6 +42,20 @@ export const LAYOUTS = [ApplicationLayoutComponent, AccountLayoutComponent, Empt
     NgbCollapseModule,
     NgbDropdownModule,
     NgxValidateCoreModule,
+  ],
+  entryComponents: [...LAYOUTS, ValidationErrorComponent, CurrentUserComponent, LanguagesComponent],
+})
+export class ThemeBasicModule {
+  static forRoot(): ModuleWithProviders<ThemeBasicModule> {
+    return {
+      ngModule: RootThemeBasicModule,
+      providers: [BASIC_THEME_NAV_ITEM_PROVIDERS, BASIC_THEME_STYLES_PROVIDERS],
+    };
+  }
+}
+
+@NgModule({
+  imports: [
     NgxValidateCoreModule.forRoot({
       targetSelector: '.form-group',
       blueprints: {
@@ -55,7 +69,7 @@ export const LAYOUTS = [ApplicationLayoutComponent, AccountLayoutComponent, Empt
         minlength:
           'AbpValidation::ThisFieldMustBeAStringOrArrayTypeWithAMinimumLengthOf{0}[{{ requiredLength }}]',
         ngbDate: 'AbpValidation::ThisFieldIsNotValid.',
-        passwordMismatch: 'AbpIdentity::Identity.PasswordConfirmationFailed',
+        passwordMismatch: 'AbpIdentity::Volo.Abp.Identity:PasswordConfirmationFailed',
         range: 'AbpValidation::ThisFieldMustBeBetween{0}And{1}[{{ min }},{{ max }}]',
         required: 'AbpValidation::ThisFieldIsRequired.',
         url: 'AbpValidation::ThisFieldIsNotAValidFullyQualifiedHttpHttpsOrFtpUrl',
@@ -63,13 +77,5 @@ export const LAYOUTS = [ApplicationLayoutComponent, AccountLayoutComponent, Empt
       errorTemplate: ValidationErrorComponent,
     }),
   ],
-  entryComponents: [...LAYOUTS, ValidationErrorComponent, CurrentUserComponent, LanguagesComponent],
 })
-export class ThemeBasicModule {
-  static forRoot(): ModuleWithProviders<ThemeBasicModule> {
-    return {
-      ngModule: ThemeBasicModule,
-      providers: [BASIC_THEME_NAV_ITEM_PROVIDERS, BASIC_THEME_STYLES_PROVIDERS],
-    };
-  }
-}
+export class RootThemeBasicModule {}

@@ -6,7 +6,11 @@
 
 ## 通用(泛型)仓储
 
-ABP为每个聚合根或实体提供了  **默认的通用(泛型)仓储**  . 你可以在服务中[注入](Dependency-Injection.md) `IRepository<TEntity, TKey>` 使用标准的**CRUD**操作. 用法示例:
+ABP为每个聚合根或实体提供了  **默认的通用(泛型)仓储**  . 你可以在服务中[注入](Dependency-Injection.md) `IRepository<TEntity, TKey>` 使用标准的**CRUD**操作.
+
+> 数据库提供程序层应正确配置为能够使用默认的通用存储库. 如果你已经使用启动模板创建了项目,则这些配置 **已经完成**了. 如果不是,请参考数据库提供程序文档([EF Core](Entity-Framework-Core.md) / [MongoDB](MongoDB.md))进行配置.
+
+**默认通用仓储用法示例:**
 
 ````C#
 public class PersonAppService : ApplicationService
@@ -192,8 +196,6 @@ var people = ((IMongoQueryable<Person>)_personRepository
 * 如果你开发可**重用的[应用模块](Modules/Index.md)**,并且不想强制使用特定的数据库提供程序,这应该作为一种[最佳实践](Best-Practices/Index.md).
 
 ### 选项-3: IAsyncQueryableExecuter
-
-> 注意,此功能在ABP框架3.0以之后的版本可用,虽然它也可以用于较早的版本,但它提供的方法非常有限.
 
 `IAsyncQueryableExecuter` 是一个用于异步执行 `IQueryable<T>` 对象的服务,**不依赖于实际的数据库提供程序**.
 
